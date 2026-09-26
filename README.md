@@ -75,8 +75,10 @@ uv run apollo-charting --transport sse --port 8000              # SSE
 
 `--transport`, `--host` (default `127.0.0.1`), and `--port` (default `8000`)
 also read `APOLLO_CHARTING_TRANSPORT`, `APOLLO_CHARTING_HOST`, and
-`APOLLO_CHARTING_PORT`. The HTTP transports bind to loopback by default; put a
-reverse proxy (and auth) in front before exposing them beyond the host.
+`APOLLO_CHARTING_PORT`; log verbosity reads `APOLLO_CHARTING_LOG_LEVEL`
+(`DEBUG`…`CRITICAL`, default `INFO`). The HTTP transports bind to loopback by
+default; put a reverse proxy (and auth) in front before exposing them beyond
+the host.
 
 ## Use with an MCP client
 
@@ -271,16 +273,17 @@ exposed over MCP**.
 ```bash
 uv sync
 bash tests/smoke.sh              # CLI engine end-to-end (self-skips render when Node/Chromium are absent)
-uv run python tests/mcp_smoke.py # MCP tools, resources, validation, and a render roundtrip
-uv run python tests/http_smoke.py # streamable-HTTP transport roundtrip
+uv run python tests/mcp_smoke.py       # MCP tools, resources, validation, and a render roundtrip
+uv run python tests/transport_smoke.py # stdio + streamable HTTP + SSE, end to end
 ```
 
 `tests/smoke.sh` generates its own fixtures and exercises every CLI verb against
 a throwaway data root. `tests/mcp_smoke.py` drives the FastMCP server in-process
 and checks the tool trio, the resources, validation, component extraction, error
-surfacing, and an end-to-end render. `tests/http_smoke.py` starts the server over
-streamable HTTP on a free port and calls it with the MCP HTTP client. The render
-sections self-skip when Node, the bundle, or Chromium are missing.
+surfacing, and an end-to-end render. `tests/transport_smoke.py` runs the server
+as a subprocess and, over each of stdio, streamable HTTP, and SSE, initializes,
+lists tools, validates a spec, and renders a PNG. The render sections self-skip
+when Node, the bundle, or Chromium are missing.
 
 ## Layout
 
@@ -300,7 +303,7 @@ apollo-charting/
 ├── tests/
 │   ├── smoke.sh            # CLI engine end-to-end
 │   ├── mcp_smoke.py        # MCP-level roundtrip (in-process)
-│   └── http_smoke.py       # streamable-HTTP transport roundtrip
+│   └── transport_smoke.py  # stdio + HTTP + SSE, end to end
 ├── .github/workflows/ci.yml
 ├── package.json  package-lock.json
 └── LICENSE

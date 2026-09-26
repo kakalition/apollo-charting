@@ -38,6 +38,11 @@ except Exception:  # pragma: no cover - direct-path import (mcp dev)
     __version__ = "1.0.0"
 
 
+def _log_level() -> str:
+    level = os.environ.get("APOLLO_CHARTING_LOG_LEVEL", "INFO").upper()
+    return level if level in ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL") else "INFO"
+
+
 mcp = FastMCP(
     "apollo-charting",
     instructions=(
@@ -45,6 +50,7 @@ mcp = FastMCP(
         "render_chart; use validate_spec to check one without rendering and "
         "chart_component to get the equivalent Recharts JSX."
     ),
+    log_level=_log_level(),
 )
 
 

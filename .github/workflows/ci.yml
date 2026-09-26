@@ -35,5 +35,5 @@ jobs:
         run: PY=.venv/bin/python bash tests/smoke.sh
       - name: MCP smoke test
         run: uv run python tests/mcp_smoke.py
-      - name: HTTP transport smoke test
-        run: uv run python tests/http_smoke.py
+      - name: Transport smoke test
+        run: uv run python tests/transport_smoke.py
