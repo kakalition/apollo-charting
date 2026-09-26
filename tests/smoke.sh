@@ -319,7 +319,7 @@ if [ -f "$SKILL/SKILL.md" ]; then
 else
   pass
 fi
-STRAY="$(find "$SKILL" -maxdepth 1 -mindepth 1 ! -name SKILL.md ! -name scripts ! -name references ! -name README.md ! -name LICENSE ! -name .gitignore ! -name requirements.txt ! -name tests ! -name package.json ! -name package-lock.json ! -name node_modules ! -name .git ! -name .venv ! -name pyproject.toml ! -name uv.lock ! -name src)"
+STRAY="$(find "$SKILL" -maxdepth 1 -mindepth 1 ! -name SKILL.md ! -name scripts ! -name references ! -name README.md ! -name LICENSE ! -name .gitignore ! -name requirements.txt ! -name tests ! -name package.json ! -name package-lock.json ! -name node_modules ! -name .git ! -name .github ! -name .venv ! -name pyproject.toml ! -name uv.lock ! -name src)"
 [ -z "$STRAY" ] && pass || fail "stray files in skill root: $STRAY"
 for helper in _lib.py _html.py; do
   [ -x "$SCRIPTS/$helper" ] && fail "$helper should not be executable" || pass
