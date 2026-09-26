@@ -1,0 +1,17 @@
+# Rendering dependencies for apollo-charting.
+#
+# The Python engine (scripts/_lib.py, _html.py, and the CLI verbs) is standard
+# library only. The stateless MCP layer in src/apollo_charting needs the `mcp`
+# SDK, which is declared in pyproject.toml and installed with `uv sync`; there
+# is nothing to install from this file.
+#
+# Rendering needs Node 20+ with the pinned packages in package.json and a
+# headless Chromium. Install once from the repo root:
+#
+#     npm ci
+#     node scripts/build.mjs
+#     npx playwright install chromium
+#
+# After that, `render_chart` is fully offline. Without Node, the bundle, or
+# Chromium, the render tool fails fast with a `dependency_missing` error and
+# `validate_spec` / `chart_component` keep working.
