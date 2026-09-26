@@ -20,6 +20,8 @@ reused as-is; Node/Playwright is shelled out to only for the screenshot.
   to disk).
 - **Stateless** — no database, no render history, no state written; safe to run
   as many copies as you like.
+- **stdio or HTTP** — MCP over stdio by default, with Streamable HTTP (`/mcp`)
+  and SSE (`/sse`) transports built in.
 - **Faithful shadcn styling** — hairline grid, no axis lines, rounded bars, the
   `--chart-1..5` token palette, light and dark themes.
 - **Deterministic output** — animations off, fixed viewport, exact
@@ -40,20 +42,45 @@ reused as-is; Node/Playwright is shelled out to only for the screenshot.
 ```bash
 git clone https://github.com/kakalition/apollo-charting
 cd apollo-charting
-
-uv sync                 # Python environment for the server
-npm ci                  # pinned render dependencies
-node scripts/build.mjs  # build the React + Recharts bundle
-npx playwright install chromium
+./install.sh
 ```
 
-The Node step is a one-time setup. After it, rendering is fully offline. (`uv`
-is the only extra tool you need; install it from
-<https://docs.astral.sh/uv/>.)
+`install.sh` is idempotent. It runs `uv sync` for the server environment, then
+`npm ci`, `node scripts/build.mjs`, and `npx playwright install chromium` for
+the render dependencies. Flags:
+
+- `--with-deps` — also install the OS packages Chromium needs (Linux; may need `sudo`).
+- `--skip-node` — Python environment only.
+- `--skip-python` — render dependencies only.
+
+The Node step is a one-time setup, after which rendering is fully offline. `uv`
+is the only extra tool you need; install it from <https://docs.astral.sh/uv/>.
+
+## Transports
+
+The server speaks MCP over **stdio** by default, and can serve the same API over
+HTTP:
+
+| Transport | Flag | Endpoint |
+|---|---|---|
+| stdio (default) | `--transport stdio` | stdin/stdout |
+| Streamable HTTP | `--transport streamable-http` | `http://HOST:PORT/mcp` |
+| HTTP + SSE | `--transport sse` | `http://HOST:PORT/sse` |
+
+```bash
+uv run apollo-charting                                          # stdio
+uv run apollo-charting --transport streamable-http --port 8000  # HTTP
+uv run apollo-charting --transport sse --port 8000              # SSE
+```
+
+`--transport`, `--host` (default `127.0.0.1`), and `--port` (default `8000`)
+also read `APOLLO_CHARTING_TRANSPORT`, `APOLLO_CHARTING_HOST`, and
+`APOLLO_CHARTING_PORT`. The HTTP transports bind to loopback by default; put a
+reverse proxy (and auth) in front before exposing them beyond the host.
 
 ## Use with an MCP client
 
-The server speaks MCP over **stdio**. Point your client at the console script:
+Point a stdio client at the console script:
 
 ```json
 {
@@ -66,11 +93,17 @@ The server speaks MCP over **stdio**. Point your client at the console script:
 }
 ```
 
-Run it directly, or explore it with the MCP Inspector:
+Or run it over HTTP and point a streamable-HTTP client at
+`http://127.0.0.1:8000/mcp`:
 
 ```bash
-uv run apollo-charting                 # stdio server
-uv run mcp dev src/apollo_charting/server.py   # inspector UI
+uv run apollo-charting --transport streamable-http --port 8000
+```
+
+Explore it interactively with the MCP Inspector:
+
+```bash
+uv run mcp dev src/apollo_charting/server.py
 ```
 
 ## Tools
@@ -239,22 +272,25 @@ exposed over MCP**.
 uv sync
 bash tests/smoke.sh              # CLI engine end-to-end (self-skips render when Node/Chromium are absent)
 uv run python tests/mcp_smoke.py # MCP tools, resources, validation, and a render roundtrip
+uv run python tests/http_smoke.py # streamable-HTTP transport roundtrip
 ```
 
 `tests/smoke.sh` generates its own fixtures and exercises every CLI verb against
 a throwaway data root. `tests/mcp_smoke.py` drives the FastMCP server in-process
 and checks the tool trio, the resources, validation, component extraction, error
-surfacing, and an end-to-end render. Both self-skip the render sections when
-Node, the bundle, or Chromium are missing.
+surfacing, and an end-to-end render. `tests/http_smoke.py` starts the server over
+streamable HTTP on a free port and calls it with the MCP HTTP client. The render
+sections self-skip when Node, the bundle, or Chromium are missing.
 
 ## Layout
 
 ```
 apollo-charting/
+├── install.sh              # one-time setup (uv + npm + bundle + Chromium)
 ├── pyproject.toml          # uv project; runtime dep: mcp; dev: mcp[cli]
 ├── src/apollo_charting/
 │   ├── __init__.py         # __version__
-│   └── server.py           # FastMCP server (tools + resources + prompt)
+│   └── server.py           # FastMCP server (tools + resources + prompt + transports)
 ├── scripts/                # the engine and CLI verbs (reused as-is)
 │   ├── _lib.py  _html.py  render.py
 │   ├── charts.py  init.py  settings.py  themes.py  reports.py
@@ -263,7 +299,9 @@ apollo-charting/
 ├── references/             # schema, commands, charts, themes, scheduling
 ├── tests/
 │   ├── smoke.sh            # CLI engine end-to-end
-│   └── mcp_smoke.py        # MCP-level roundtrip
+│   ├── mcp_smoke.py        # MCP-level roundtrip (in-process)
+│   └── http_smoke.py       # streamable-HTTP transport roundtrip
+├── .github/workflows/ci.yml
 ├── package.json  package-lock.json
 └── LICENSE
 ```

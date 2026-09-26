@@ -11,7 +11,9 @@ discoverable, and one prompt gives the model the spec contract.
 """
 from __future__ import annotations
 
+import argparse
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -370,8 +372,40 @@ def make_chart() -> str:
 
 
 def main() -> None:
-    """Run the server over stdio."""
-    mcp.run()
+    """Run the server.
+
+    Defaults to stdio for MCP clients. ``--transport streamable-http`` (endpoint
+    ``/mcp``) or ``--transport sse`` (endpoint ``/sse``) serves the same MCP API
+    over HTTP instead.
+    """
+    parser = argparse.ArgumentParser(
+        prog="apollo-charting",
+        description="Stateless MCP server that renders chart specs to PNG.",
+    )
+    parser.add_argument(
+        "--transport",
+        choices=("stdio", "streamable-http", "sse"),
+        default=os.environ.get("APOLLO_CHARTING_TRANSPORT", "stdio"),
+        help="MCP transport to serve (default: stdio, or $APOLLO_CHARTING_TRANSPORT).",
+    )
+    parser.add_argument(
+        "--host",
+        default=os.environ.get("APOLLO_CHARTING_HOST", "127.0.0.1"),
+        help="HTTP bind host (default: 127.0.0.1, or $APOLLO_CHARTING_HOST).",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=int(os.environ.get("APOLLO_CHARTING_PORT", "8000")),
+        help="HTTP bind port (default: 8000, or $APOLLO_CHARTING_PORT).",
+    )
+    parser.add_argument("--version", action="version", version="apollo-charting %s" % __version__)
+    args = parser.parse_args()
+
+    if args.transport != "stdio":
+        mcp.settings.host = args.host
+        mcp.settings.port = args.port
+    mcp.run(transport=args.transport)
 
 
 if __name__ == "__main__":
